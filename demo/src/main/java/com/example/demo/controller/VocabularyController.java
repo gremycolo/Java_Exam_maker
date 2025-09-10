@@ -61,8 +61,13 @@ public class VocabularyController {
     }
 
     @PutMapping("/api/submitQuiz")
-    public String processQuizSubmission(@RequestBody QuizSubmission submission) {
-        return vocabularyService.processQuizSubmission(submission);
+    public String processQuizSubmission(@RequestBody QuizSubmission submission) throws Exception {
+        return vocabularyService.processQuizSubmission(submission, true);
+    }
+
+    @PutMapping("/api/submitIdentificationQuiz")
+    public String processIdentificationQuizSubmission(@RequestBody QuizSubmission submission) throws Exception {
+        return vocabularyService.processQuizSubmission(submission, false);
     }
 
     @PostMapping

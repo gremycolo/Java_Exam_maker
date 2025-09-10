@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.*;
+import com.example.demo.util.*;
 import com.example.demo.repository.QuizResultRepository;
 import com.example.demo.repository.VocabularyRepository;
 import com.example.demo.util.WordVectorSingleton;
@@ -31,11 +32,14 @@ public class VocabularyService {
     @Autowired
     private QuizResultRepository quizResultRepository;
 
+    @Autowired
+    private EmbeddingService embeddingService;
+
 
     String modelPath = "C:\\Users\\estoi\\Documents\\Java_Exam_maker\\demo\\src\\main\\java\\com\\example\\demo\\GoogleNews-vectors-negative300.bin";
     int seed = 20250909;//69422;
     Double CONFUSION_THRESHOLD = 0.7;
-    public String jlptLevel = "N5";
+    public String jlptLevel = "N3";
     public boolean allowKatakana = false;
     public boolean noReading = true;
     public boolean choiceReading = true;
@@ -141,7 +145,7 @@ public class VocabularyService {
 
     //Picks items from custom id's in the database then uses it as problems
     public List<QuestionAndChoices> customQuestions() {
-        int numberOfItems = 100;
+        int numberOfItems = 30;
         Random random = new Random(seed);
         List<Integer> quizItems = getAllVocabulary().stream()
                 .map(Vocabulary::getInsertOrder)
@@ -402,7 +406,7 @@ public class VocabularyService {
 
 
 
-    public String processQuizSubmission(QuizSubmission submission) {
+    public String processQuizSubmission(QuizSubmission submission, boolean isMultipleChoice) throws Exception {
         String name = submission.getName();
         List<Answer> answers = submission.getAnswers();
         //int totalQuestions = answers.size();
@@ -419,16 +423,47 @@ public class VocabularyService {
                     .map(Vocabulary::getMeaning)
                     .orElse(null);
 
-            if (correctAnswer != null && correctAnswer.equals(userAnswer)) {
-                correctAnswers++;
-            } else if (correctAnswer != null) {
-                mistakes.add(k + ""); // Add question number to mistakes
+            if(isMultipleChoice) {
+                if (correctAnswer != null && correctAnswer.equals(userAnswer)) {
+                    correctAnswers++;
+                } else if (correctAnswer != null) {
+                    mistakes.add(k + ""); // Add question number to mistakes
+                }
+            } else {
+                List<List<Float>> meaningEmbeddings = vocabularyOptional
+                        .map(Vocabulary::getMeaningEmbedding)
+                        .orElse(new ArrayList<>());
+
+                List<Float> userEmbedding = embeddingService.getEmbedding(userAnswer);
+
+                float maxCS = 0f;
+
+                for (List<Float> meaningEmbedding : meaningEmbeddings) {
+                    float cs = embeddingService.cosineSimilarity(userEmbedding, meaningEmbedding);
+                    if (cs > maxCS) maxCS = cs;
+                }
+
+                if (maxCS >= 0.54f) {
+                    correctAnswers++;
+                } else {
+                    mistakes.add(k + "");
+                }
+
+                //Get meaningEmbedding
+                //Get userAnswer.Embedding
+                //Max_CS = 0; //cosine similarity
+                //for each embedding in meaningEmbedding
+                // currentCS = CS of embedding and userAnswer.Embedding
+                // if (currentCS > Max_CS)
+                // Max_CS = currentCS
+                // end loop
+                //if Max_CS >= 0.71: correctAnswers++ else mistakes.add(k+"")
             }
             k++;
             System.out.println(correctAnswer + "-----" +userAnswer);
         }
 
-        int score = correctAnswers; // Percentage score
+        int score = correctAnswers/k; // Percentage score
         QuizResult quizResult = new QuizResult(name, score, mistakes, LocalDateTime.now());
         quizResultRepository.save(quizResult);
 

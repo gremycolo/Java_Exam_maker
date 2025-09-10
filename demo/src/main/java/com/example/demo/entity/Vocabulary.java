@@ -2,6 +2,9 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import com.example.demo.converter.EmbeddingConverter;
+
+import java.util.List;
 
 @Entity
 @Table(name = "vocabulary") // Updated to lowercase to match your DB
@@ -28,6 +31,10 @@ public class Vocabulary {
 
     @Column(name = "IsEntirelyKatakana", nullable = false)
     private boolean isEntirelyKatakana;
+
+    @Convert(converter = EmbeddingConverter.class)
+    @Column(name = "MeaningEmbedding", columnDefinition = "nvarchar(max)")
+    private List<List<Float>> meaningEmbedding;
 
     public String getFurigana() {
         if (this.jpWriting == null) {

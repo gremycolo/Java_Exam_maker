@@ -2,7 +2,7 @@ import pyodbc
 import requests
 import json
 
-# DB connection
+# === DB connection ===
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
     "SERVER=localhost;"  # adjust if SQL Server is remote or named instance
@@ -13,14 +13,14 @@ conn_str = (
 conn = pyodbc.connect(conn_str)
 cursor = conn.cursor()
 
-# Ollama endpoint
+# === Ollama endpoint ===
 OLLAMA_URL = "http://localhost:11434/api/embeddings"
 MODEL_NAME = "nomic-embed-text"
 
 def get_embedding(text: str):
     payload = {
         "model": MODEL_NAME,
-        "prompt": text   # ⚠️ for /api/embeddings, use "prompt"
+        "prompt": text
     }
     response = requests.post(OLLAMA_URL, json=payload)
     response.raise_for_status()
@@ -31,7 +31,7 @@ def get_embedding(text: str):
 
     return data["embedding"]
 
-# Fetch vocab meanings without embeddings
+# === Fetch vocab entries without embeddings ===
 cursor.execute("SELECT InsertOrder, Meaning FROM Vocabulary WHERE MeaningEmbedding IS NULL")
 rows = cursor.fetchall()
 
@@ -43,26 +43,33 @@ for idx, row in enumerate(rows, start=1):
         continue
 
     try:
-        embedding = get_embedding(meaning)
-        embedding_json = json.dumps(embedding, ensure_ascii=False)  # ensures proper JSON
+        # Split by comma and strip spaces
+        words = [w.strip() for w in meaning.split(",") if w.strip()]
+        embeddings_list = []
+
+        for w in words:
+            embedding = get_embedding(w)
+            embeddings_list.append(embedding)
+
+        # Convert the list of embeddings to JSON
+        embedding_json = json.dumps(embeddings_list, ensure_ascii=False)
 
         cursor.execute(
             "UPDATE Vocabulary SET MeaningEmbedding = ? WHERE InsertOrder = ?",
-            (str(embedding_json), insert_order)  # cast explicitly
+            (embedding_json, insert_order)
         )
 
-        # commit every 50 rows instead of each one
+        # Commit every 50 rows to avoid huge transaction
         if idx % 50 == 0:
             conn.commit()
 
-        print(f"✅ Embedded InsertOrder={insert_order}, Meaning='{meaning[:20]}...' (len={len(embedding)})")
+        print(f"✅ InsertOrder={insert_order}, Meaning='{meaning[:20]}...', embeddings={len(embeddings_list)}")
 
     except Exception as e:
         print(f"❌ Failed InsertOrder={insert_order}, Error={e}")
 
-# final commit
+# Final commit
 conn.commit()
-
 cursor.close()
 conn.close()
 print("Done embedding all vocab entries.")
