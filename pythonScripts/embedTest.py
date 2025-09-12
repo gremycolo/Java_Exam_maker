@@ -13,11 +13,9 @@ def cosine_similarity(vec1, vec2):
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
 # Example usage
-#also,as I thought,still,in spite of,absolutely,of course
-# text1 = "of course"
-# text2 = "as expected"
-text1 = "2. to poke"
-text2 = "to stab"
+#aerial,overhead,fiction,fanciful
+text1 = "et cetera"
+text2 = "etc"
 vec1 = get_embedding(text1)
 vec2 = get_embedding(text2)
 

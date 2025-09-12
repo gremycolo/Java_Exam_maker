@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 const Identification = () => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
+  const [name, setName] = useState(""); // ✅ added state for name
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [quizResult, setQuizResult] = useState(null);
@@ -15,7 +16,7 @@ const Identification = () => {
       try {
         const res = await fetch(`${ngrokLink}/api/vocabulary/100Words`);
         const data = await res.json();
-        // initialize answers map empty for each id to keep selection logic consistent
+
         const initialAnswers = {};
         data.forEach((q) => {
           initialAnswers[q.id] = "";
@@ -41,7 +42,7 @@ const Identification = () => {
     if (submitted) return;
 
     const submission = {
-      name: "", // optional: include name if you want to add it
+      name: name, // ✅ include name in payload
       answers: questions.map((q) => ({
         id: q.id,
         answer: (answers[q.id] || "").trim(),
@@ -58,22 +59,19 @@ const Identification = () => {
         }
       );
 
-      // backend in your project used plain text responses earlier for multiple choice
-      // here we try to parse JSON; if backend returns text then adapt accordingly
       const contentType = res.headers.get("content-type") || "";
       let result;
       if (contentType.includes("application/json")) {
         result = await res.json();
       } else {
-        // try text -> fallback parsing the message
         const text = await res.text();
-        // keep any human message for debugging
         console.log("SubmitIdentificationQuiz response text:", text);
-        // fallback: try to extract score/mistakes like your original component did
         const scoreMatch = text.match(/Score: (\d+)%/);
         const mistakesMatch = text.match(/Mistakes: ([\d, ]+)/);
         const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
-        const mistakes = mistakesMatch ? mistakesMatch[1].split(", ").map(Number) : [];
+        const mistakes = mistakesMatch
+          ? mistakesMatch[1].split(", ").map(Number)
+          : [];
         result = { score, mistakes };
       }
 
@@ -86,12 +84,9 @@ const Identification = () => {
 
   if (loading) return <div style={styles.loading}>Loading questions...</div>;
 
-  // helpers for styling like in MultipleChoice
   const isMistakeForNumber = (questionNumber) => {
     if (!quizResult) return false;
-    // Support both formats: mistakes array of numbers OR array of objects (ids)
     if (Array.isArray(quizResult.mistakes)) {
-      // numeric list
       return quizResult.mistakes.includes(questionNumber);
     }
     return false;
@@ -102,20 +97,22 @@ const Identification = () => {
       <h1 style={styles.header}>Japanese Vocabulary Quiz</h1>
 
       <form onSubmit={handleSubmit}>
+        {/* ✅ Name input */}
         <div style={styles.nameCard}>
-          <label style={styles.questionText}>Your Name</label>
+          <label htmlFor="userName" style={styles.nameLabel}>
+            Enter Name Here:
+          </label>
           <input
+            id="userName"
             type="text"
-            value={answers.name || ""}
-            onChange={(e) => setAnswers((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Enter your name..."
-            style={styles.input}
-            onFocus={(e) => (e.target.style.borderColor = styles.inputFocus.borderColor)}
-            onBlur={(e) => (e.target.style.borderColor = styles.input.borderColor)}
-            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={styles.nameInput}
             disabled={submitted}
           />
         </div>
+
+        {/* Questions */}
         {questions.map((q, index) => {
           const questionNumber = index + 1;
           const isMistake = isMistakeForNumber(questionNumber);
@@ -137,7 +134,6 @@ const Identification = () => {
               <h3 style={styles.questionText}>
                 Question {questionNumber}: {q.jpWriting}
               </h3>
-
               <div style={styles.choice}>
                 <input
                   type="text"
@@ -152,35 +148,38 @@ const Identification = () => {
           );
         })}
 
+        {/* ✅ Button with correct name validation */}
         <button
-            type="submit"
-            disabled={
-                submitted ||
-                !answers.name || // disable if name empty
-                questions.some((q) => !(answers[q.id] || "").trim()) // disable if any question empty
-            }
-            style={
-                submitted ||
-                !answers.name ||
-                questions.some((q) => !(answers[q.id] || "").trim())
-                ? styles.buttonDisabled
-                : styles.button
-            }
-            onMouseOver={(e) =>
-                !submitted &&
-                answers.name &&
-                questions.every((q) => (answers[q.id] || "").trim()) &&
-                (e.currentTarget.style.backgroundColor = styles.buttonHover.backgroundColor)
-            }
-            onMouseOut={(e) =>
-                !submitted &&
-                answers.name &&
-                questions.every((q) => (answers[q.id] || "").trim()) &&
-                (e.currentTarget.style.backgroundColor = styles.button.backgroundColor)
-            }
-            >
-            Submit Answers
-            </button>
+          type="submit"
+          disabled={
+            submitted ||
+            !name.trim() ||
+            questions.some((q) => !(answers[q.id] || "").trim())
+          }
+          style={
+            submitted ||
+            !name.trim() ||
+            questions.some((q) => !(answers[q.id] || "").trim())
+              ? styles.buttonDisabled
+              : styles.button
+          }
+          onMouseOver={(e) =>
+            !submitted &&
+            name.trim() &&
+            questions.every((q) => (answers[q.id] || "").trim()) &&
+            (e.currentTarget.style.backgroundColor =
+              styles.buttonHover.backgroundColor)
+          }
+          onMouseOut={(e) =>
+            !submitted &&
+            name.trim() &&
+            questions.every((q) => (answers[q.id] || "").trim()) &&
+            (e.currentTarget.style.backgroundColor =
+              styles.button.backgroundColor)
+          }
+        >
+          Submit Answers
+        </button>
 
         {quizResult && (
           <div style={styles.resultContainer}>
@@ -206,7 +205,6 @@ const Identification = () => {
   );
 };
 
-// — exact same styles object used in your MultipleChoice / App.js
 const styles = {
   container: {
     maxWidth: "800px",
@@ -223,28 +221,6 @@ const styles = {
     marginBottom: "20px",
     fontSize: "2.5em",
     fontWeight: "bold",
-  },
-  nameInput: {
-    display: "flex",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-  label: {
-    fontSize: "1.2em",
-    color: "#34495e",
-    marginRight: "10px",
-  },
-  input: {
-    padding: "10px",
-    fontSize: "1em",
-    border: "2px solid #3498db",
-    borderRadius: "5px",
-    width: "100%", // adapted to fill the container for identification
-    outline: "none",
-    transition: "border-color 0.3s",
-  },
-  inputFocus: {
-    borderColor: "#2980b9",
   },
   question: {
     backgroundColor: "#ffffff",
@@ -282,12 +258,14 @@ const styles = {
   choice: {
     margin: "5px 0",
   },
-  radio: {
-    marginRight: "10px",
-  },
-  optionText: {
-    color: "#7f8c8d",
-    fontSize: "1.1em",
+  input: {
+    padding: "10px",
+    fontSize: "1em",
+    border: "2px solid #3498db",
+    borderRadius: "5px",
+    width: "100%",
+    outline: "none",
+    transition: "border-color 0.3s",
   },
   button: {
     backgroundColor: "#e74c3c",
@@ -335,11 +313,25 @@ const styles = {
     fontSize: "1.1em",
   },
   nameCard: {
-    backgroundColor: "#ffffff",
+    border: "1px solid #ddd",
     padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    backgroundColor: "#fafafa",
+  },
+  nameLabel: {
+    fontSize: "20px", // bigger
+    fontWeight: "bold", // bolder
+    marginBottom: "10px",
+    display: "block",
+  },
+  nameInput: {
+    width: "100%",
+    padding: "10px",
     borderRadius: "5px",
-    marginBottom: "15px",
-    borderLeft: "5px solid #3498db", // blue accent like the theme
+    border: "1px solid #ccc",
+    fontSize: "18px", // bigger input text
+    fontWeight: "600", // semi-bold
   },
 };
 

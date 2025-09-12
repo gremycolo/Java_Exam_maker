@@ -39,9 +39,9 @@ public class VocabularyService {
     String modelPath = "C:\\Users\\estoi\\Documents\\Java_Exam_maker\\demo\\src\\main\\java\\com\\example\\demo\\GoogleNews-vectors-negative300.bin";
     int seed = 202509121;//69422;
     Double CONFUSION_THRESHOLD = 0.7;
-    public String jlptLevel = "N2";
+    public String jlptLevel = "N5";
     public boolean allowKatakana = false;
-    public boolean noReading = true;
+    public boolean noReading = false;
     public boolean choiceReading = true;
     public String out = "";
     public int numberOfItems = 100;
@@ -178,14 +178,14 @@ public class VocabularyService {
             QuestionAndChoices qc = new QuestionAndChoices();
             if(!noReading && !reviewWord.getJpWriting().equals(reviewWord.getJpReading())){
                 qc.setJpWriting(reviewWord.getJpWriting() + " (" + reviewWord.getJpReading() + ")");
+                reviewer.add(reviewWord.getJpWriting() + " (" + reviewWord.getJpReading() + ") - " + reviewWord.getMeaning());
             } else {
                 qc.setJpWriting(reviewWord.getJpWriting());
+                reviewer.add(reviewWord.getJpWriting() + " - " + reviewWord.getMeaning());
             }
             qc.setNumber(i + 1);
             qc.setNumber(i + 1);
             qc.setId(Math.toIntExact(reviewWord.getInsertOrder()));
-
-            reviewer.add(reviewWord.getJpWriting() + " - " + reviewWord.getMeaning());
 
             // Add choices
             List<String> choices = new ArrayList<>();
@@ -421,7 +421,7 @@ public class VocabularyService {
             String correctAnswer = vocabularyOptional
                     .map(Vocabulary::getMeaning)
                     .orElse(null);
-            int totStrLen = userAnswer.length() + correctAnswer.length();
+
 
             if(isMultipleChoice) {
                 if (correctAnswer != null && correctAnswer.equals(userAnswer)) {
@@ -438,14 +438,30 @@ public class VocabularyService {
 
                 float maxCS = 0f;
 
+                int iMaxCS = 0;
+                int csCtr = 0;
                 for (List<Float> meaningEmbedding : meaningEmbeddings) {
                     float cs = embeddingService.cosineSimilarity(userEmbedding, meaningEmbedding);
-                    if (cs > maxCS) maxCS = cs;
+                    if (cs > maxCS) {
+                        maxCS = cs;
+                        iMaxCS = csCtr;
+                    }
+                    csCtr++;
                 }
 
-                if (maxCS >= -0.168846f*Math.log(totStrLen)+1.04894f) {
-                    correctAnswers++;
+                double threshold;
+                int totStrLen = userAnswer.length() + correctAnswer.length();
+
+                if (1.5 * userAnswer.length() < correctAnswer.length()) {
+                    // userAnswer is much shorter -> stricter
+                    threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) -userAnswer.length() * 2 / 7);
                 } else {
+                    // normal case
+                    threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) -totStrLen / 7);
+                }
+                if (maxCS >= threshold) {
+                    correctAnswers++;
+                }else {
                     mistakes.add(k + "");
                 }
 
@@ -463,7 +479,7 @@ public class VocabularyService {
             System.out.println(correctAnswer + "-----" +userAnswer);
         }
 
-        int score = correctAnswers/k; // Percentage score
+        int score = correctAnswers*100/k; // Percentage score
         QuizResult quizResult = new QuizResult(name, score, mistakes, LocalDateTime.now());
         quizResultRepository.save(quizResult);
 
