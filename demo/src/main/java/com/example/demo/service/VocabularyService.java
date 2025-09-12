@@ -37,14 +37,14 @@ public class VocabularyService {
 
 
     String modelPath = "C:\\Users\\estoi\\Documents\\Java_Exam_maker\\demo\\src\\main\\java\\com\\example\\demo\\GoogleNews-vectors-negative300.bin";
-    int seed = 20250909;//69422;
+    int seed = 202509121;//69422;
     Double CONFUSION_THRESHOLD = 0.7;
-    public String jlptLevel = "N3";
+    public String jlptLevel = "N2";
     public boolean allowKatakana = false;
     public boolean noReading = true;
     public boolean choiceReading = true;
     public String out = "";
-
+    public int numberOfItems = 100;
     //int choiceShuffleSeed = seed;
     //Random random = new Random(seed);
 
@@ -145,7 +145,6 @@ public class VocabularyService {
 
     //Picks items from custom id's in the database then uses it as problems
     public List<QuestionAndChoices> customQuestions() {
-        int numberOfItems = 30;
         Random random = new Random(seed);
         List<Integer> quizItems = getAllVocabulary().stream()
                 .map(Vocabulary::getInsertOrder)
@@ -422,6 +421,7 @@ public class VocabularyService {
             String correctAnswer = vocabularyOptional
                     .map(Vocabulary::getMeaning)
                     .orElse(null);
+            int totStrLen = userAnswer.length() + correctAnswer.length();
 
             if(isMultipleChoice) {
                 if (correctAnswer != null && correctAnswer.equals(userAnswer)) {
@@ -443,7 +443,7 @@ public class VocabularyService {
                     if (cs > maxCS) maxCS = cs;
                 }
 
-                if (maxCS >= 0.54f) {
+                if (maxCS >= -0.168846f*Math.log(totStrLen)+1.04894f) {
                     correctAnswers++;
                 } else {
                     mistakes.add(k + "");

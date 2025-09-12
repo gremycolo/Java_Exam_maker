@@ -102,22 +102,19 @@ const Identification = () => {
       <h1 style={styles.header}>Japanese Vocabulary Quiz</h1>
 
       <form onSubmit={handleSubmit}>
-        // inside the form, above the questions
-        <div style={styles.nameInput}>
-        <label style={styles.label}>
-            Your Name:
-            <input
+        <div style={styles.nameCard}>
+          <label style={styles.questionText}>Your Name</label>
+          <input
             type="text"
             value={answers.name || ""}
             onChange={(e) => setAnswers((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Enter your name"
+            placeholder="Enter your name..."
             style={styles.input}
             onFocus={(e) => (e.target.style.borderColor = styles.inputFocus.borderColor)}
             onBlur={(e) => (e.target.style.borderColor = styles.input.borderColor)}
             required
             disabled={submitted}
-            />
-        </label>
+          />
         </div>
         {questions.map((q, index) => {
           const questionNumber = index + 1;
@@ -336,6 +333,13 @@ const styles = {
   mistakeText: {
     color: "#a94442",
     fontSize: "1.1em",
+  },
+  nameCard: {
+    backgroundColor: "#ffffff",
+    padding: "15px",
+    borderRadius: "5px",
+    marginBottom: "15px",
+    borderLeft: "5px solid #3498db", // blue accent like the theme
   },
 };
 

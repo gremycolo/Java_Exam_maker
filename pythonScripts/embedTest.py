@@ -16,8 +16,8 @@ def cosine_similarity(vec1, vec2):
 #also,as I thought,still,in spite of,absolutely,of course
 # text1 = "of course"
 # text2 = "as expected"
-text1 = "to boast"
-text2 = "to me"
+text1 = "2. to poke"
+text2 = "to stab"
 vec1 = get_embedding(text1)
 vec2 = get_embedding(text2)
 
