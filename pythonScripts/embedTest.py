@@ -14,8 +14,8 @@ def cosine_similarity(vec1, vec2):
 
 # Example usage
 #aerial,overhead,fiction,fanciful
-text1 = "et cetera"
-text2 = "etc"
+text1 = "gradually"
+text2 = "little by little"
 vec1 = get_embedding(text1)
 vec2 = get_embedding(text2)
 

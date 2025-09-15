@@ -37,14 +37,14 @@ public class VocabularyService {
 
 
     String modelPath = "C:\\Users\\estoi\\Documents\\Java_Exam_maker\\demo\\src\\main\\java\\com\\example\\demo\\GoogleNews-vectors-negative300.bin";
-    int seed = 202509121;//69422;
+    int seed = 99999;//202509151;//69422;
     Double CONFUSION_THRESHOLD = 0.7;
     public String jlptLevel = "N5";
     public boolean allowKatakana = false;
     public boolean noReading = false;
     public boolean choiceReading = true;
     public String out = "";
-    public int numberOfItems = 100;
+    public int numberOfItems = 5;
     //int choiceShuffleSeed = seed;
     //Random random = new Random(seed);
 
@@ -405,12 +405,11 @@ public class VocabularyService {
 
 
 
-    public String processQuizSubmission(QuizSubmission submission, boolean isMultipleChoice) throws Exception {
+    public QuizResultResponse processQuizSubmission(QuizSubmission submission, boolean isMultipleChoice) throws Exception {
         String name = submission.getName();
         List<Answer> answers = submission.getAnswers();
-        //int totalQuestions = answers.size();
         int correctAnswers = 0;
-        List<String> mistakes = new ArrayList<>();
+        List<MistakeDetail> detailedMistakes = new ArrayList<>();
 
         int k = 1;
         for (Answer answer : answers) {
@@ -418,74 +417,61 @@ public class VocabularyService {
             answer.setNumber(k);
             String userAnswer = answer.getAnswer();
             Optional<Vocabulary> vocabularyOptional = getVocabularyById(questionId);
+
             String correctAnswer = vocabularyOptional
                     .map(Vocabulary::getMeaning)
                     .orElse(null);
+            String correctAnswerQ = vocabularyOptional
+                    .map(Vocabulary::getJpWriting)
+                    .orElse(null);
 
-
-            if(isMultipleChoice) {
-                if (correctAnswer != null && correctAnswer.equals(userAnswer)) {
-                    correctAnswers++;
-                } else if (correctAnswer != null) {
-                    mistakes.add(k + ""); // Add question number to mistakes
-                }
+            boolean isCorrect = false;
+            if (isMultipleChoice) {
+                isCorrect = (correctAnswer != null && correctAnswer.equals(userAnswer));
             } else {
                 List<List<Float>> meaningEmbeddings = vocabularyOptional
                         .map(Vocabulary::getMeaningEmbedding)
                         .orElse(new ArrayList<>());
-
                 List<Float> userEmbedding = embeddingService.getEmbedding(userAnswer);
 
                 float maxCS = 0f;
-
-                int iMaxCS = 0;
-                int csCtr = 0;
                 for (List<Float> meaningEmbedding : meaningEmbeddings) {
                     float cs = embeddingService.cosineSimilarity(userEmbedding, meaningEmbedding);
-                    if (cs > maxCS) {
-                        maxCS = cs;
-                        iMaxCS = csCtr;
-                    }
-                    csCtr++;
+                    if (cs > maxCS) maxCS = cs;
                 }
 
                 double threshold;
                 int totStrLen = userAnswer.length() + correctAnswer.length();
-
                 if (1.5 * userAnswer.length() < correctAnswer.length()) {
-                    // userAnswer is much shorter -> stricter
                     threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) -userAnswer.length() * 2 / 7);
                 } else {
-                    // normal case
                     threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) -totStrLen / 7);
                 }
-                if (maxCS >= threshold) {
-                    correctAnswers++;
-                }else {
-                    mistakes.add(k + "");
-                }
 
-                //Get meaningEmbedding
-                //Get userAnswer.Embedding
-                //Max_CS = 0; //cosine similarity
-                //for each embedding in meaningEmbedding
-                // currentCS = CS of embedding and userAnswer.Embedding
-                // if (currentCS > Max_CS)
-                // Max_CS = currentCS
-                // end loop
-                //if Max_CS >= 0.71: correctAnswers++ else mistakes.add(k+"")
+                isCorrect = maxCS >= threshold;
             }
+
+            if (isCorrect) {
+                correctAnswers++;
+            } else {
+                detailedMistakes.add(new MistakeDetail(k, correctAnswerQ, correctAnswer));
+            }
+
             k++;
-            System.out.println(correctAnswer + "-----" +userAnswer);
         }
 
-        int score = correctAnswers*100/k; // Percentage score
-        QuizResult quizResult = new QuizResult(name, score, mistakes, LocalDateTime.now());
+        int score = correctAnswers * 100 / answers.size();
+
+        // ✅ Save to DB with numbers only
+        List<String> mistakeNumbers = detailedMistakes.stream()
+                .map(m -> String.valueOf(m.getNumber()))
+                .collect(Collectors.toList());
+
+        QuizResult quizResult = new QuizResult(name, score, mistakeNumbers, LocalDateTime.now());
         quizResultRepository.save(quizResult);
 
-        return "Quiz submission processed for " + name + ". Score: " + score + "%, Mistakes: " +
-                mistakes.stream().collect(Collectors.joining(", "));
+        // ✅ Return full details to frontend
+        return new QuizResultResponse(name, score, detailedMistakes, LocalDateTime.now());
     }
-
 
 }

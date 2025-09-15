@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 
 import com.example.demo.entity.QuestionAndChoices;
+import com.example.demo.entity.QuizResultResponse;
 import com.example.demo.entity.QuizSubmission;
 import com.example.demo.entity.Vocabulary;
 import com.example.demo.service.ReviewWordService;
@@ -35,17 +36,6 @@ public class VocabularyController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-//    @GetMapping("/100Words/bak")
-//    public List<QuestionAndChoices> get100Words(){
-//        return vocabularyService.questionsForTheDay();
-//    }
-
-
-//    //@CrossOrigin
-//    @GetMapping("/100Words/finishedWords")
-//    public List<QuestionAndChoices> getReviewQuestionsForTheDayFinishedWords() {
-//        return reviewWordService.reviewquestionsForTheDay();
-//    }
 
     //@CrossOrigin
     @GetMapping("/100Words")
@@ -61,12 +51,12 @@ public class VocabularyController {
     }
 
     @PutMapping("/api/submitQuiz")
-    public String processQuizSubmission(@RequestBody QuizSubmission submission) throws Exception {
+    public QuizResultResponse processQuizSubmission(@RequestBody QuizSubmission submission) throws Exception {
         return vocabularyService.processQuizSubmission(submission, true);
     }
 
     @PutMapping("/api/submitIdentificationQuiz")
-    public String processIdentificationQuizSubmission(@RequestBody QuizSubmission submission) throws Exception {
+    public QuizResultResponse processIdentificationQuizSubmission(@RequestBody QuizSubmission submission) throws Exception {
         return vocabularyService.processQuizSubmission(submission, false);
     }
 
@@ -75,23 +65,4 @@ public class VocabularyController {
         return vocabularyService.createVocabulary(vocabulary);
     }
 
-//    @PutMapping("/{id}")
-//    public ResponseEntity<Vocabulary> updateVocabulary(@PathVariable int id, @RequestBody Vocabulary vocabularyDetails) {
-//        try {
-//            Vocabulary updatedVocabulary = vocabularyService.updateVocabulary(id, vocabularyDetails);
-//            return ResponseEntity.ok(updatedVocabulary);
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.notFound().build();
-//        }
-//    }
-
-//    @DeleteMapping("/{id}")
-//    public ResponseEntity<Void> deleteVocabulary(@PathVariable int id) {
-//        try {
-//            vocabularyService.deleteVocabulary(id);
-//            return ResponseEntity.ok().build();
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.notFound().build();
-//        }
-//    }
 }

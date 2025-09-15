@@ -50,8 +50,7 @@ const Identification = () => {
     };
 
     try {
-      const res = await fetch(
-        `${ngrokLink}/api/vocabulary/api/submitIdentificationQuiz`,
+      const res = await fetch(`${ngrokLink}/api/vocabulary/api/submitIdentificationQuiz`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -59,22 +58,7 @@ const Identification = () => {
         }
       );
 
-      const contentType = res.headers.get("content-type") || "";
-      let result;
-      if (contentType.includes("application/json")) {
-        result = await res.json();
-      } else {
-        const text = await res.text();
-        console.log("SubmitIdentificationQuiz response text:", text);
-        const scoreMatch = text.match(/Score: (\d+)%/);
-        const mistakesMatch = text.match(/Mistakes: ([\d, ]+)/);
-        const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
-        const mistakes = mistakesMatch
-          ? mistakesMatch[1].split(", ").map(Number)
-          : [];
-        result = { score, mistakes };
-      }
-
+      const result = await res.json(); // ✅ always JSON now
       setQuizResult(result);
       setSubmitted(true);
     } catch (err) {
@@ -188,14 +172,14 @@ const Identification = () => {
             </div>
             {quizResult.mistakes && quizResult.mistakes.length > 0 && (
               <>
-                <h4>Mistakes (Question Numbers):</h4>
-                <div style={styles.mistakeItem}>
-                  <span style={styles.mistakeText}>
-                    {Array.isArray(quizResult.mistakes)
-                      ? quizResult.mistakes.join(", ")
-                      : JSON.stringify(quizResult.mistakes)}
-                  </span>
-                </div>
+                <h4>Mistakes:</h4>
+                {quizResult.mistakes.map((m, idx) => (
+                  <div key={idx} style={styles.mistakeItem}>
+                    <span style={styles.mistakeText}>
+                      Q{m.number}: {m.jpWriting} → {m.meaning}
+                    </span>
+                  </div>
+                ))}
               </>
             )}
           </div>

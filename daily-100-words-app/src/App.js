@@ -5,8 +5,8 @@ import Identification from './components/Identifcation';
 function App() {
   return (
     <div>
-      {/* <MultipleChoice /> */}
-      <Identification />
+      <MultipleChoice />
+      {/* <Identification /> */}
     </div>
   );
 }
