@@ -6,6 +6,7 @@ import com.example.demo.repository.QuizResultRepository;
 import com.example.demo.repository.VocabularyRepository;
 import com.example.demo.util.WordVectorSingleton;
 
+import jakarta.annotation.PostConstruct;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -36,18 +37,30 @@ public class VocabularyService {
     private EmbeddingService embeddingService;
 
 
-    String modelPath = "C:\\Users\\estoi\\Documents\\Java_Exam_maker\\demo\\src\\main\\java\\com\\example\\demo\\GoogleNews-vectors-negative300.bin";
-    int seed = 99999;//202509151;//69422;
+    int seed = 202509151;//69422;
     Double CONFUSION_THRESHOLD = 0.7;
     public String jlptLevel = "N5";
     public boolean allowKatakana = false;
-    public boolean noReading = false;
-    public boolean choiceReading = true;
+    public boolean noReading = true;        //no furigana
+//    public boolean isMultipleChoice = true;
+    public boolean choiceReading = true;    //the choices are reading (else writing)
     public String out = "";
-    public int numberOfItems = 5;
-    //int choiceShuffleSeed = seed;
-    //Random random = new Random(seed);
+    public int numberOfItems = 3;
 
+    private List<QuestionAndChoices> cachedQuestions;
+
+    // Generate once, right after the service is created
+    @PostConstruct
+    public void init() {
+        this.cachedQuestions = customQuestions();
+    }
+    public List<QuestionAndChoices> getCachedQuestions() {
+        return cachedQuestions;
+    }
+    public List<QuestionAndChoices> regenerateQuestions() {
+        this.cachedQuestions = customQuestions();
+        return cachedQuestions;
+    }
 
 
 //    public List<Vocabulary> getAllVocabulary() {
@@ -333,50 +346,6 @@ public class VocabularyService {
                 mistakes.stream().collect(Collectors.joining(", "));
     }
 
-//    public List<QuestionAndChoices> questionsForTheDay(){
-//        //Random random = new Random(69422);
-//
-//        List<QuestionAndChoices> qcList = new ArrayList<>();
-//        for(int i = 0; i < 100; i++){
-//            int id = random.nextInt(vocabularyRepository.findMaxInsertOrder()) + 1;
-//            QuestionAndChoices qc = new QuestionAndChoices();
-//            Optional<Vocabulary> vocabularyOptional = getVocabularyById(id);
-//            qc.setJpWriting(vocabularyOptional
-//                    .map(Vocabulary::getJpWriting) // Get jpWriting if Vocabulary exists
-//                    .orElse(null));
-//            qc.setNumber(i+1);
-//            qc.setId(vocabularyOptional
-//                    .map(Vocabulary::getInsertOrder) // Get id if Vocabulary exists
-//                    .orElse(null));
-//
-//
-//            List<String> choices = new ArrayList<>();
-//            for(int j = 0; j < 3; j++){
-//                Optional<Vocabulary> optTAVocabulary = getVocabularyById(idRandDifferentiator(id));
-//                //getVocabularyById(idRandDifferentiator(id)); //makes sure it is not the same as questionID
-//                choices.add(optTAVocabulary
-//                        .map(Vocabulary::getMeaning) // REMINDER USE AI TO ASSESS IF SAME MEANING
-//                        .orElse(null));
-//            }
-//            choices.add(vocabularyOptional
-//                    .map(Vocabulary::getMeaning)
-//                    .orElse(null));
-////            qc.setJpWriting(vocabularyOptional
-////                    .map(Vocabulary::getMeaning)
-////                    .orElse(null));
-//
-//            choiceShuffleSeed = (7*choiceShuffleSeed+500)%seed;
-//            Collections.shuffle(choices, new Random(choiceShuffleSeed));
-//
-//
-//            qc.setA(choices.get(0));// getVocabularyById(id);
-//            qc.setB(choices.get(1));
-//            qc.setC(choices.get(2));
-//            qc.setD(choices.get(3));
-//            qcList.add(qc);
-//        }
-//        return qcList;/////////////////////////////RETURN!
-//    }
 
     public Optional<Vocabulary> getVocabularyById(int id) {
         return vocabularyRepository.findById(id);
@@ -418,14 +387,21 @@ public class VocabularyService {
             String userAnswer = answer.getAnswer();
             Optional<Vocabulary> vocabularyOptional = getVocabularyById(questionId);
 
-            String correctAnswer = vocabularyOptional
-                    .map(Vocabulary::getMeaning)
-                    .orElse(null);
-            String correctAnswerQ = vocabularyOptional
+            String correctAnswer;
+            String correctAnswerQ = vocabularyOptional  //the Question
                     .map(Vocabulary::getJpWriting)
                     .orElse(null);
+            if(choiceReading && isMultipleChoice){      //if multiple choice question and the contents are reading
+                correctAnswer = vocabularyOptional
+                        .map(Vocabulary::getJpReading)
+                        .orElse(null);
+            } else {
+                correctAnswer = vocabularyOptional
+                        .map(Vocabulary::getMeaning)
+                        .orElse(null);
+            }
 
-            boolean isCorrect = false;
+            boolean isCorrect;
             if (isMultipleChoice) {
                 isCorrect = (correctAnswer != null && correctAnswer.equals(userAnswer));
             } else {
@@ -443,9 +419,9 @@ public class VocabularyService {
                 double threshold;
                 int totStrLen = userAnswer.length() + correctAnswer.length();
                 if (1.5 * userAnswer.length() < correctAnswer.length()) {
-                    threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) -userAnswer.length() * 2 / 7);
+                    threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) - userAnswer.length() * 2 / 7);
                 } else {
-                    threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) -totStrLen / 7);
+                    threshold = 0.53 + (0.98 - 0.53) * Math.exp((double) - totStrLen / 7);
                 }
 
                 isCorrect = maxCS >= threshold;
@@ -454,7 +430,9 @@ public class VocabularyService {
             if (isCorrect) {
                 correctAnswers++;
             } else {
-                detailedMistakes.add(new MistakeDetail(k, correctAnswerQ, correctAnswer));
+                detailedMistakes.add(new MistakeDetail(k, correctAnswerQ + " (" + vocabularyOptional
+                        .map(Vocabulary::getJpReading)
+                        .orElse(null) + ") - " +  userAnswer + "❌", correctAnswer + "✅"));
             }
 
             k++;

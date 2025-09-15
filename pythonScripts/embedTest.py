@@ -14,8 +14,16 @@ def cosine_similarity(vec1, vec2):
 
 # Example usage
 #aerial,overhead,fiction,fanciful
-text1 = "gradually"
-text2 = "little by little"
+text1 = "in this situation"
+text2 = "context"
+
+for i in text1.split(","):
+    for j in text2.split(","):
+        vec1 = get_embedding(i.strip())
+        vec2 = get_embedding(j.strip())
+        cos_sim = cosine_similarity(vec1, vec2)
+        print(f"Cosine similarity between '{i.strip()}' and '{j.strip()}': {round(cos_sim, 4)}")
+
 vec1 = get_embedding(text1)
 vec2 = get_embedding(text2)
 

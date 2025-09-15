@@ -1,5 +1,6 @@
 // src/components/Identification.js
 import React, { useState, useEffect } from "react";
+import QuizResultDisplay from "./QuizResultDisplay";
 
 const Identification = () => {
   const [questions, setQuestions] = useState([]);
@@ -71,7 +72,7 @@ const Identification = () => {
   const isMistakeForNumber = (questionNumber) => {
     if (!quizResult) return false;
     if (Array.isArray(quizResult.mistakes)) {
-      return quizResult.mistakes.includes(questionNumber);
+      return quizResult.mistakes.some(m => m.number === questionNumber);
     }
     return false;
   };
@@ -165,25 +166,7 @@ const Identification = () => {
           Submit Answers
         </button>
 
-        {quizResult && (
-          <div style={styles.resultContainer}>
-            <div style={styles.scoreText}>
-              Your Score: {quizResult.score ?? "0"}%
-            </div>
-            {quizResult.mistakes && quizResult.mistakes.length > 0 && (
-              <>
-                <h4>Mistakes:</h4>
-                {quizResult.mistakes.map((m, idx) => (
-                  <div key={idx} style={styles.mistakeItem}>
-                    <span style={styles.mistakeText}>
-                      Q{m.number}: {m.jpWriting} → {m.meaning}
-                    </span>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        )}
+        <QuizResultDisplay quizResult={quizResult} styles={styles} />
       </form>
     </div>
   );

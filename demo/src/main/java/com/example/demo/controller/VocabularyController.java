@@ -40,7 +40,7 @@ public class VocabularyController {
     //@CrossOrigin
     @GetMapping("/100Words")
     public List<QuestionAndChoices> getReviewQuestionsForTheDay() {
-        return vocabularyService.customQuestions();
+        return vocabularyService.getCachedQuestions();
     }
 
 
