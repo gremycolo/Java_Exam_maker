@@ -3,6 +3,7 @@ Prerequisites
 - Java
 - Ollama - nomic-embed-text model
 - VoiceVox
+- SSMS (MS SQL)
 - Python (optional for altering embeddings)
 
 HOW TO RUN:
