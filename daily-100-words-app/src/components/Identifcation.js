@@ -1,6 +1,8 @@
 // src/components/Identification.js
 import React, { useState, useEffect } from "react";
 import QuizResultDisplay from "./QuizResultDisplay";
+import { speakJapanese } from "../utils/Base64ToAudio";
+
 
 const Identification = () => {
   const [questions, setQuestions] = useState([]);
@@ -116,8 +118,18 @@ const Identification = () => {
 
           return (
             <div key={q.id} style={questionStyle}>
-              <h3 style={styles.questionText}>
+              {/* <h3 style={styles.questionText}>
                 Question {questionNumber}: {q.jpWriting}
+              </h3> */}
+              <h3 style={styles.questionText}>
+                Question {questionNumber}:
+                <button
+                  type="button"
+                  onClick={() => speakJapanese(q.jpReadingBase64)}
+                  style={styles.speakButton}
+                >
+                  🔊
+                </button>
               </h3>
               <div style={styles.choice}>
                 <input
@@ -299,6 +311,16 @@ const styles = {
     border: "1px solid #ccc",
     fontSize: "18px", // bigger input text
     fontWeight: "600", // semi-bold
+  },
+    speakButton: {
+    marginLeft: "10px",
+    backgroundColor: "#3498db",
+    border: "none",
+    borderRadius: "50%",
+    color: "#fff",
+    fontSize: "1.2em",
+    padding: "5px 10px",
+    cursor: "pointer",
   },
 };
 

@@ -7,6 +7,7 @@ import com.example.demo.entity.QuizSubmission;
 import com.example.demo.entity.Vocabulary;
 import com.example.demo.service.ReviewWordService;
 import com.example.demo.service.VocabularyService;
+import com.example.demo.util.AudioGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,9 @@ public class VocabularyController {
     public List<Vocabulary> getAllVocabulary() {
         return vocabularyService.getAllVocabulary();
     }
+
+    @Autowired
+    private AudioGenerator audioGenerator;
 
     @GetMapping("/{id}")
     public ResponseEntity<Vocabulary> getVocabularyById(@PathVariable int id) {
@@ -63,6 +67,16 @@ public class VocabularyController {
     @PostMapping
     public Vocabulary createVocabulary(@RequestBody Vocabulary vocabulary) {
         return vocabularyService.createVocabulary(vocabulary);
+    }
+
+
+
+
+    ///TESTS
+    @GetMapping("/test-voicevox")
+    public String testVoiceVox() throws Exception {
+        // speaker=1 is default VoiceVox character
+        return audioGenerator.textToBase64Audio("こんにちは", 1);
     }
 
 }

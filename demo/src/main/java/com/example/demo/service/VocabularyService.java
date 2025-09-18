@@ -7,6 +7,7 @@ import com.example.demo.repository.VocabularyRepository;
 import com.example.demo.util.WordVectorSingleton;
 
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -36,17 +37,28 @@ public class VocabularyService {
     @Autowired
     private EmbeddingService embeddingService;
 
+    @Autowired
+    private AudioGenerator audioGenerator;
 
-    int seed = 202509151;//69422;
+
+    int seed = 333333333;//69422;
     Double CONFUSION_THRESHOLD = 0.7;
     public String jlptLevel = "N5";
     public boolean allowKatakana = false;
     public boolean noReading = true;        //no furigana
 //    public boolean isMultipleChoice = true;
     public boolean choiceReading = true;    //the choices are reading (else writing)
-    public String out = "";
-    public int numberOfItems = 3;
+    public String out = "";                 //systemoutput documentation
+    public int numberOfItems = 100;
+    int[] normalVoices = {
+            2, 3, 8, 9, 10, 11, 12, 13, 14,
+            16, 20, 21, 23, 27, 28, 29, 42, 43,
+            46, 47, 51, 52, 53, 54, 55, 58, 61,
+            67, 68, 69, 74, 89, 90, 94, 99, 100,
+            102, 107, 108, 109
+    }; //18 is ara ara
 
+    @Getter
     private List<QuestionAndChoices> cachedQuestions;
 
     // Generate once, right after the service is created
@@ -54,9 +66,7 @@ public class VocabularyService {
     public void init() {
         this.cachedQuestions = customQuestions();
     }
-    public List<QuestionAndChoices> getCachedQuestions() {
-        return cachedQuestions;
-    }
+
     public List<QuestionAndChoices> regenerateQuestions() {
         this.cachedQuestions = customQuestions();
         return cachedQuestions;
@@ -153,12 +163,10 @@ public class VocabularyService {
         }
     }
 
-
-
-
     //Picks items from custom id's in the database then uses it as problems
     public List<QuestionAndChoices> customQuestions() {
         Random random = new Random(seed);
+        List<Integer> voice_num_list = new ArrayList<>();
         List<Integer> quizItems = getAllVocabulary().stream()
                 .map(Vocabulary::getInsertOrder)
                 .collect(Collectors.toList());
@@ -189,6 +197,22 @@ public class VocabularyService {
 
             // Prepare QuestionAndChoices
             QuestionAndChoices qc = new QuestionAndChoices();
+
+//            qc.setJpReading(reviewWord.getJpReading()); //bandaid solution for reading
+            String stringAudioJpReading = null;
+            try {
+                int voice_num = random.nextInt(39) + 1;
+//                voice_num_list.add(voice_num);
+                stringAudioJpReading = audioGenerator.textToBase64Audio(reviewWord.getJpReading(), normalVoices[random.nextInt(normalVoices.length)]);
+//                if(i == 0){
+//                    stringAudioJpReading = audioGenerator.textToBase64Audio("今日は私と一緒に公園に行きませんか。", 18);
+//                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            qc.setJpReadingBase64(stringAudioJpReading);
+
+
             if(!noReading && !reviewWord.getJpWriting().equals(reviewWord.getJpReading())){
                 qc.setJpWriting(reviewWord.getJpWriting() + " (" + reviewWord.getJpReading() + ")");
                 reviewer.add(reviewWord.getJpWriting() + " (" + reviewWord.getJpReading() + ") - " + reviewWord.getMeaning());
@@ -197,7 +221,7 @@ public class VocabularyService {
                 reviewer.add(reviewWord.getJpWriting() + " - " + reviewWord.getMeaning());
             }
             qc.setNumber(i + 1);
-            qc.setNumber(i + 1);
+//            qc.setNumber(i + 1);
             qc.setId(Math.toIntExact(reviewWord.getInsertOrder()));
 
             // Add choices
@@ -223,7 +247,7 @@ public class VocabularyService {
         for (int j = 1; j <= reviewer.size(); j++) {
             System.out.println(j + ". " + reviewer.get(j - 1));
         }
-
+        voice_num_list.forEach(System.out::println);
         return qcList;
     }
 
@@ -345,7 +369,6 @@ public class VocabularyService {
         return "Quiz submission processed for " + name + ". Score: " + score + "%, Mistakes: " +
                 mistakes.stream().collect(Collectors.joining(", "));
     }
-
 
     public Optional<Vocabulary> getVocabularyById(int id) {
         return vocabularyRepository.findById(id);

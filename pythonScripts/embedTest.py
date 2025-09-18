@@ -14,8 +14,8 @@ def cosine_similarity(vec1, vec2):
 
 # Example usage
 #aerial,overhead,fiction,fanciful
-text1 = "in this situation"
-text2 = "context"
+text1 = "huge"
+text2 = "colossal"
 
 for i in text1.split(","):
     for j in text2.split(","):
@@ -29,3 +29,7 @@ vec2 = get_embedding(text2)
 
 cos_sim = cosine_similarity(vec1, vec2)
 print(f"Cosine similarity between '{text1}' and '{text2}': {round(cos_sim, 4)}")
+
+
+
+# to eat vs. to
