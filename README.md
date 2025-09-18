@@ -5,7 +5,7 @@ Prerequisites
 - VoiceVox
 - Python (optional for altering embeddings)
 
-  HOW TO RUN:
+HOW TO RUN:
 
 backend:
 1. cd backend
